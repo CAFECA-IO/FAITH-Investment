@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     // snapshot 轉為 base64
     // const snapshot = await page.screenshot({ fullPage: true });
     const snapshot = await page.screenshot({ fullPage: true, encoding: 'base64' });
-    return NextResponse.json({ snapshot });
+    // return NextResponse.json({ snapshot });
 
     // 取得頁面內純文字內容（document.body.innerText）
     // const textContent = await page.evaluate(() => document.body.innerText);
