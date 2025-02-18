@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "swarm": "next start -p 10009"
   },
   "dependencies": {
     "chart.js": "^4.4.7",

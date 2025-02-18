@@ -23,11 +23,9 @@ export async function GET(request: Request) {
     // 載入目標網頁，等待網路請求穩定
     await page.goto(url, { waitUntil: 'networkidle0' });
 
-    await page.screenshot({ fullPage: true, path: './example.png' });
     // snapshot 轉為 base64
-    // const snapshot = await page.screenshot({ fullPage: true });
     const snapshot = await page.screenshot({ fullPage: true, encoding: 'base64' });
-    // return NextResponse.json({ snapshot });
+    return NextResponse.json({ snapshot });
 
     // 取得頁面內純文字內容（document.body.innerText）
     // const textContent = await page.evaluate(() => document.body.innerText);
@@ -38,7 +36,7 @@ export async function GET(request: Request) {
       "messages": [
           {
               "role": "user",
-              "content": `摘要圖片內容`,
+              "content": "摘要圖片內容",
               "images": [snapshot]
           }
       ]
