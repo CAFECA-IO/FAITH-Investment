@@ -1,12 +1,12 @@
 const aich = 'http://127.0.0.1:11434/api/chat';
 
-interface IAskOptions {
+interface IChatOptions {
   prompt: string;
   model?: string;
   data?: string[];
 }
 
-const ask = async ({ prompt, model, data }: IAskOptions) => {
+const chat = async ({ prompt, model, data }: IChatOptions) => {
   if (prompt.trim() === '') throw new Error('require prompt');
 
   const queryModel = model || 'llama3.2:3b';
@@ -60,4 +60,4 @@ const ask = async ({ prompt, model, data }: IAskOptions) => {
   return result;
 };
 
-export default ask;
+export default chat;

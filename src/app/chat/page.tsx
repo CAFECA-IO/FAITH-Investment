@@ -33,7 +33,7 @@ export default function Chat() {
     setCurrentResponse('');
 
     try {
-      const res = await fetch('/api/ask', {
+      const res = await fetch('/api/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: input }),
