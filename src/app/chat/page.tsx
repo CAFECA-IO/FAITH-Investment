@@ -3,52 +3,28 @@
 import { useState, useEffect, useRef } from 'react';
 import { CSSProperties } from 'react';
 
-export default function Chat() {
-  interface Message {
-    sender: string;
-    text: string;
-  }
+interface Message {
+  sender: string;
+  text: string;
+}
 
-  const [messages, setMessages] = useState<Message[]>([{ sender: 'faith', text: '我是費思，值得信任的人工智能會計師' }]);
+export default function Chat() {
+  const hasFetchedGreeting = useRef(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentResponse, setCurrentResponse] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // 內容更新後捲動至頁面尾端
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages, currentResponse]);
-
-  const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    // 加入用戶發言紀錄
-    setMessages((prev) => [...prev, { sender: 'user', text: input }]);
-    setInput('');
-    setLoading(true);
-    setCurrentResponse('');
-
+  const getGreeting = async () => {
     try {
-      const res = await fetch('/api/v1/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: input }),
-      });
-
+      const res = await fetch('/api/v1/greeting');
       if (!res.body) {
-        // 如果不支持串流，直接解析 JSON
         const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          { sender: 'faith', text: data.output || data.error || '我斷線了' },
-        ]);
+        setMessages((prev) => [...prev, { sender: 'assistant', text: data.error || '我斷線了' }]);
       } else {
         // 預先加入一筆空回覆內容，後續會逐步更新之
-        setMessages((prev) => [...prev, { sender: 'faith', text: '' }]);
+        setMessages((prev) => [...prev, { sender: 'assistant', text: '' }]);
         const reader = res.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let done = false;
@@ -70,7 +46,67 @@ export default function Chat() {
           // 將串流內容串接至最後一筆對話內容
           setMessages((prev) => {
             const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = { sender: 'faith', text: resultText };
+            newMessages[newMessages.length - 1] = { sender: 'assistant', text: resultText };
+            return newMessages;
+          });
+        }
+      }
+    }
+    catch (error) {
+      console.error(error);
+      setMessages((prev) => [...prev, { sender: 'assistant', text: '我無法回答這個問題，我們換個話題試試' }]);
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    // 加入用戶發言紀錄
+    setMessages((prev) => [...prev, { sender: 'user', text: input }]);
+    setInput('');
+    setLoading(true);
+    setCurrentResponse('');
+
+    try {
+      const res = await fetch('/api/v1/room/655360/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: input }),
+      });
+
+      if (!res.body) {
+        // 如果不支持串流，直接解析 JSON
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          { sender: 'assistant', text: data.output || data.error || '我斷線了' },
+        ]);
+      } else {
+        // 預先加入一筆空回覆內容，後續會逐步更新之
+        setMessages((prev) => [...prev, { sender: 'assistant', text: '' }]);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let done = false;
+        let resultText = '';
+
+        // 逐步讀取輸出文字串流
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          const chunk = decoder.decode(value || new Uint8Array(), { stream: !done });
+          try {
+            const message = JSON.parse(chunk)?.message?.content;
+            resultText += message;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (ignore) {
+            // 忽略解析錯誤
+          }
+          setCurrentResponse(resultText);
+          // 將串流內容串接至最後一筆對話內容
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1] = { sender: 'assistant', text: resultText };
             return newMessages;
           });
         }
@@ -79,12 +115,27 @@ export default function Chat() {
       console.error(error);
       setMessages((prev) => [
         ...prev,
-        { sender: 'faith', text: '我無法回答這個問題，我們換個話題試試' },
+        { sender: 'assistant', text: '我無法回答這個問題，我們換個話題試試' },
       ]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Info: (20250221 - Luphia) 取得問候語，透過 useRef 來確保只執行一次
+    if (!hasFetchedGreeting.current) {
+      hasFetchedGreeting.current = true;
+      getGreeting();
+    }
+  }, []);
+
+  // 內容更新後捲動至頁面尾端
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, currentResponse]);
 
   return (
     <div style={styles.container}>

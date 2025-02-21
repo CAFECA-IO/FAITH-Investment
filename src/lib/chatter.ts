@@ -1,6 +1,6 @@
 const aich = 'http://127.0.0.1:11434/api/chat';
 
-interface IChatOptions {
+export interface IChatOptions {
   prompt: string;
   model?: string;
   data?: string[];
@@ -35,29 +35,25 @@ const chat = async ({ prompt, model, data }: IChatOptions) => {
   if (!queryResponse.ok) throw new Error('AI response error');
   if (!queryResponse.body) throw new Error('AI no Response');
 
+  // 建立一個 TransformStream 來串接 Ollama 服務的回覆
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
   const reader = queryResponse.body.getReader();
   const decoder = new TextDecoder('utf-8');
 
-  async function pump(prevResult = '') {
-    let fullResult;
+  // 逐步讀取串流內容，並透過 writer 寫入串流
+  async function pump() {
     const { done, value } = await reader.read();
-    const chunk = decoder.decode(value, { stream: true });
-    try {
-      const jsonData = JSON.parse(chunk);
-      const partialResult = jsonData.message.content;
-      fullResult = prevResult + partialResult;
-    // console.log(result);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // ignore error
-    } finally {
-      fullResult = fullResult || prevResult;
-      if (!done) return pump(fullResult);
-      return fullResult;
+    if (done) {
+      writer.close();
+      return;
     }
+    const chunk = decoder.decode(value, { stream: true });
+    await writer.write(chunk);
+    pump();
   }
-  const result = await pump();
-  return result;
+  pump();
+  return readable;
 };
 
 export default chat;
