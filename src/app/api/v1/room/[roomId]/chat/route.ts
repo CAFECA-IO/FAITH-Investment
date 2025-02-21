@@ -13,9 +13,9 @@ const chatRooms: {
   [roomId: string]: IChatRoom;
 } = {};
 
-export async function POST(req: NextRequest, params: { roomId: string }) {
+export async function POST(req: NextRequest) {
   try {
-    const { roomId } = params;
+    const roomId = "655360";
     const { prompt, model } = await req.json();
     if (!prompt) {
       return NextResponse.json({ error: '缺少 prompt 参数' }, { status: 400 });
